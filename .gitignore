@@ -1,0 +1,84 @@
+﻿# Compiled binaries
+*.exe
+*.exe~
+*.dll
+*.so
+*.dylib
+altnet
+altnet.exe
+
+# Test binaries
+*.test
+*.out
+
+# Go workspace
+go.work
+go.work.sum
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Local tooling config (Claude Code) — not part of the project
+.claude/
+
+# Local data (peer keys, storage, logs) — runtime state, anywhere in tree
+data/
+**/data/
+app/backend/data/
+**/daemon/data/
+*.log
+
+# ── SECRETS: keys, tokens, databases — NEVER publish ──
+keys/
+**/keys/
+*.key
+peer.key
+**/registrar-token*
+registrar-token.txt
+# Databases hold password hashes, sessions, emails, user data
+*.db
+*.db-wal
+*.db-shm
+*.sqlite
+*.sqlite3
+# Passwords / env / explicitly-marked secrets
+donotpush*
+*password*.txt
+*.secret
+secrets/
+.env
+*.env
+
+# ── Apps kept PRIVATE — only the protocol/network is published ──
+# The Studio desktop app, backend, admin app, and demo live under app/
+# (singular). The public repo ships only the protocol: core/, apps/
+# (plural — registrar, gateway, dns, …), and cli/. This pattern matches
+# the "app" directory exactly and does NOT affect "apps".
+/app/
+
+# ── Build artifacts / bundles (not source) ──
+*.deb
+*.AppImage
+*.zip
+altnet-linux
+altnet-backend-linux
+for-dad/
+build/bin/
+**/build/bin/
+
+# ── Frontend deps & generated ──
+node_modules/
+app/desktop/frontend/dist/
+app/desktop/frontend/wailsjs/
+
+# Personal notes / transcripts / scratch -- never publish
+notes/
+BUILD-TRANSCRIPT.md
+_*.txt
