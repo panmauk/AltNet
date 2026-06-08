@@ -4,7 +4,7 @@ set -e
 export PATH="$PATH:/usr/local/go/bin:/root/go/bin"
 SRC=/mnt/c/Users/rober/Documents/Internet
 DST=~/altnet
-VER=0.8.0
+VER=0.9.0
 PKG=altnet-studio
 ROOT=/tmp/${PKG}_${VER}_amd64
 
