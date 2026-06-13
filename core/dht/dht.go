@@ -685,8 +685,8 @@ func (d *DHT) sendFindValue(c Contact, key NodeID) ([]byte, []Contact, error) {
 // Returns an error only if the value is oversized; partial replication is
 // reported via the count, not as an error.
 func (d *DHT) Store(key NodeID, value []byte) (int, error) {
-	if len(value) > MaxValueSize {
-		return 0, fmt.Errorf("value too large: %d bytes (max %d)", len(value), MaxValueSize)
+	if err := d.StoreLocal(key, value); err != nil {
+		return 0, err
 	}
 	// Blocklist gate: refuse to publish content whose hash is blocked.
 	// Returns no error (the publisher gets a 0-replicas success rather
@@ -695,8 +695,36 @@ func (d *DHT) Store(key NodeID, value []byte) (int, error) {
 	if d.IsBlocked(key) {
 		return 0, nil
 	}
-	d.store.Put(key, value)
+	return d.Replicate(key, value), nil
+}
 
+// StoreLocal writes (key, value) into this node's local store only — no
+// network Lookup, no store RPCs. The value is immediately retrievable from
+// this node and answerable to peers' find_value, but it is not pushed to
+// the K-closest peers. Pair it with Replicate (typically in a background
+// goroutine) when a caller needs to return promptly and can let network
+// propagation catch up — e.g. bulk site publishing, where a synchronous
+// per-chunk Lookup serializes into minutes on a node with slow or stale
+// peers.
+func (d *DHT) StoreLocal(key NodeID, value []byte) error {
+	if len(value) > MaxValueSize {
+		return fmt.Errorf("value too large: %d bytes (max %d)", len(value), MaxValueSize)
+	}
+	if d.IsBlocked(key) {
+		return nil
+	}
+	d.store.Put(key, value)
+	return nil
+}
+
+// Replicate pushes an (already locally stored) value out to the K-closest
+// peers, best effort, and returns how many accepted it. It performs a
+// network Lookup and parallel store RPCs, so it can take seconds on a slow
+// network — it is safe to call from a background goroutine.
+func (d *DHT) Replicate(key NodeID, value []byte) int {
+	if d.IsBlocked(key) {
+		return 0
+	}
 	targets := d.Lookup(key)
 
 	var wg sync.WaitGroup
@@ -714,7 +742,7 @@ func (d *DHT) Store(key NodeID, value []byte) (int, error) {
 		}(c)
 	}
 	wg.Wait()
-	return int(successes), nil
+	return int(successes)
 }
 
 // Get retrieves the value for a content-addressed key from the DHT.

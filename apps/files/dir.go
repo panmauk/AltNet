@@ -107,7 +107,7 @@ func PublishDir(d *dht.DHT, rootPath string) (dht.NodeID, *Directory, error) {
 		return dht.NodeID{}, nil, fmt.Errorf("marshal directory: %w", err)
 	}
 	rootKey := dht.ContentAddress(blob)
-	if _, err := d.Store(rootKey, blob); err != nil {
+	if err := publishStore(d, rootKey, blob); err != nil {
 		return dht.NodeID{}, nil, fmt.Errorf("store directory: %w", err)
 	}
 	return rootKey, dir, nil

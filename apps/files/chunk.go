@@ -22,6 +22,22 @@ import (
 	"altnet/core/dht"
 )
 
+// publishStore writes a published blob (chunk, manifest, or directory) into
+// the local store immediately and kicks off best-effort network replication
+// in the background. Publishing this way returns as soon as the content is
+// locally retrievable, instead of blocking on a synchronous DHT Lookup per
+// chunk — which, on a node with slow or stale peers, serializes into minutes
+// and trips the publish HTTP timeout. The background Replicate pushes the
+// content to the K-closest peers (including the always-on seed) within
+// seconds; until then the publishing node serves it directly.
+func publishStore(d *dht.DHT, key dht.NodeID, value []byte) error {
+	if err := d.StoreLocal(key, value); err != nil {
+		return err
+	}
+	go d.Replicate(key, value)
+	return nil
+}
+
 // ChunkSize is the maximum bytes in one chunk. We pick a value comfortably
 // below dht.MaxValueSize to leave room for JSON+base64 overhead of the
 // store payload. 64 KiB raw bytes -> ~85 KiB base64 -> ~86 KiB on the wire,
@@ -72,7 +88,7 @@ func PublishBytes(d *dht.DHT, data []byte) (*FileManifest, dht.NodeID, error) {
 		}
 		chunk := data[offset:end]
 		key := dht.ContentAddress(chunk)
-		if _, err := d.Store(key, chunk); err != nil {
+		if err := publishStore(d, key, chunk); err != nil {
 			return nil, dht.NodeID{}, fmt.Errorf("store chunk %d: %w", offset/ChunkSize, err)
 		}
 		manifest.Chunks = append(manifest.Chunks, key.Hex())
@@ -83,7 +99,7 @@ func PublishBytes(d *dht.DHT, data []byte) (*FileManifest, dht.NodeID, error) {
 		return nil, dht.NodeID{}, fmt.Errorf("marshal manifest: %w", err)
 	}
 	manifestKey := dht.ContentAddress(manifestBlob)
-	if _, err := d.Store(manifestKey, manifestBlob); err != nil {
+	if err := publishStore(d, manifestKey, manifestBlob); err != nil {
 		return nil, dht.NodeID{}, fmt.Errorf("store manifest: %w", err)
 	}
 	return manifest, manifestKey, nil
